@@ -1,7 +1,8 @@
 import pyttsx3 #pip install pyttsx3
 import datetime
 import speech_recognition as sr #pip install SpeechRecognition
-import wikipedia #pip install wikipedia
+import wikipediaapi #pip install wikipedia-api
+import sys 
 import smtplib
 import webbrowser as wb
 import psutil #pip install psutil
@@ -9,8 +10,25 @@ import pyjokes #pip install pyjokes (pero esta en inlges, hace el cambio )
 import os
 import pyautogui #pip install pyautogui (For Screenshot)
 import random
+import time
+import operator
+import json
+from urllib.request import urlopen #pip3 install urllib3 
+import requests
 
 engine = pyttsx3.init()
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[0].id)
+
+##
+wikipediaapi.log.setLevel(level=wikipediaapi.logging.DEBUG)
+
+# Set handler if you use Python in interactive mode
+out_hdlr = wikipediaapi.logging.StreamHandler(sys.stderr)
+out_hdlr.setFormatter(wikipediaapi.logging.Formatter('%(asctime)s %(message)s'))
+out_hdlr.setLevel(wikipediaapi.logging.DEBUG)
+wikipediaapi.log.addHandler(out_hdlr)
+##
 
 def speak(audio):
     engine.say(audio)
@@ -84,6 +102,7 @@ def TakeCommand_():# pip install speechRecognition python -m speech_recognition
     except Exception as e:
         print(e)
         print("Por favor, dilo de nuevo")
+        speak("Hubo un error, no reconozco la voz")
         return "None"
 
     return query
@@ -99,40 +118,48 @@ def sendEmail(to, content):
 
 def cpu():
     usuage=str(psutil.cpu_percent())
-    speak('El CPU es '+usuage)
-
+    speak('la utilización actual de la CPU es  ')
+    speak(usuage)
+    speak('porciento')
     battery=psutil.sensors_battery()
-    speak('La bateria esta al '+battery.percent)
+    speak('La bateria esta al ')
+    speak(battery.percent)
+    speak('porciento')
 
 def joke():
+    #buscar pyjokes.py y cambiar en por es
     speak(pyjokes.get_joke())
 
 def screenshot():
-    img = pyautogui.screenshot()
+    horat=datetime.datetime.now().strftime("%j%M%Y%H-%M-%S")
+    img = pyautogui.screenshot()    
+    ruta='D:\Biblioteca\Imagenes\screenshot{}.png'.format(horat)
+    print(ruta)
     #cambiar por la ruta en la que desear guardar las capturas de pantalla
-    img.save('D:\Biblioteca\Imagenes\screenshot.png')
-
-
+    img.save(ruta)
+#-------------------------------------------------------------------------------------
+#//////////////////////////////////////////////////////////////////////////////////77
 if __name__=="__main__":
-
+    clear = lambda: os.system('cls') 
+    clear()
     wishme_()
-    joke()
+    try:
 
     while True:
         query= TakeCommand_().lower()      
     
     #si algo de lo que dices es por ejemplo hora, el asiatente te dira que hora es
-        if 'hora' in query: 
+        if 'dime la hora' in query or 'qué hora es' in query: 
              time_()
-        elif 'fecha' in query:
+        elif 'dime la fecha' in query or 'qué fecha es' in query:
              date_()
         elif 'wikipedia' in query:
             speak("Buscando...")
             query=query.replace('wikipedia','')
-            result=wikipedia.summary(query, sentences=3)
-            speak('De acuerdo con wikipedia')
-            print(result)
-            speak(result)
+            wiki = wikipediaapi.Wikipedia(language='es')
+            page_ostrava = wiki.page(query)
+            print(page_ostrava.summary)
+            speak(page_ostrava.summary)
 
         elif 'enviar correo'in query:
             try:
@@ -160,7 +187,7 @@ if __name__=="__main__":
             speak("Qué deseas buscar?")
             search_Term=TakeCommand_()
             speak("Estamos en YouTube")
-            wb.open('https://www.youtube.com/results?search_query=='+search_Term)
+            wb.open('https://www.youtube.com/results?search_query='+search_Term)
 
         elif 'busca en google' in query:
             speak("Qué deseas buscar?")
@@ -171,7 +198,7 @@ if __name__=="__main__":
         elif 'cpu' in query:
             cpu()
 
-        elif 'broma' in query:
+        elif 'dime una broma' in query:
             joke()
 
         elif 'apagate' in query:
@@ -179,11 +206,8 @@ if __name__=="__main__":
             quit()
 
         elif 'word' in query:
-            speak('abriendo word...')
-
-        elif 'word' in query:
-            speak("oAbriendo word...")
-            word = r'Word path'
+            speak("Abriendo word...")
+            word = 'path del programa'
             os.startfile(word)
 
         elif "Escribir nota" in query:
@@ -243,6 +267,7 @@ if __name__=="__main__":
                     os.startfile(os.path.join(songs_dir,songs[rand]))
                     continue                                         
             elif 'aleatoiro' in rand:
+			#numero de canciones en mi carpeta de musica
                     rand = random.randint(1,350)
                     os.startfile(os.path.join(songs_dir,songs[rand]))
                     continue
@@ -256,6 +281,67 @@ if __name__=="__main__":
             remember.write(memory)
             remember.close()
 
-        elif '¿Tengo algo que recordar?' in query:
+        elif '¿Tengo algo que recordar?' in query :
             remember =open('memory.txt', 'r')
             speak("Me pediste que recordara esto "+remember.read())
+
+        elif 'noticias' in query:
+            
+            try:
+
+                jsonObj = urlopen('apikey de noticias')
+                data = json.load(jsonObj)
+                i = 1
+                
+                speak('aquí algunas noticas sobre México')
+                print('''=============== TOP DE NOTICIAS ============'''+ '\n')
+                
+                for item in data['articles']:
+                    
+                    print(str(i) + '. ' + item['title'] + '\n')
+                    print(item['description'] + '\n')
+                    speak(str(i) + '. ' + item['title'] + '\n')
+                    i += 1
+                    
+            except Exception as e:
+                print(str(e)) 
+                speak("No puedo acceder a internet")
+
+        elif "Donde esta" in query:
+            query = query.replace("donde esta", "")
+            location = query
+            speak("Abriendo google maps")
+            speak(location)
+            wb.open("https://www.google.com/maps/place/" + location + "")
+        elif "busca en el mapa" in query:
+            query = query.replace("busca en el mapa", "")
+            location = query
+            speak("Abriendo google maps")
+            speak(location)
+            wb.open("https://www.google.com/maps/place/" + location + "")
+
+        elif "abre facebook" in query or "facebook"  in query or "abre feis" in query :
+            webbrowser.open('https://web.facebook.com/')
+        elif "abre google" in query:
+            webbrowser.open('http://google.com') 
+        elif "abre twitter" in query:
+            webbrowser.open('https://twitter.com/?lang=es') 
+
+        elif "no escuches" in query or "detente un momento" in query or "duermete un momento" in query:
+            speak("por cuantos segundos?")
+            a = int(TakeCommand())
+            time.sleep(a)
+            print(a)
+
+        elif 'apaga computadora' in query:
+            os.system("shutdown -1")
+        elif 'reinicia computadora' in query:
+            os.system("shutdown /r /t 1")
+
+
+
+
+
+
+# pip install pyinstaller
+#pyinstaller --onefile 'viernes.py'
